@@ -8,7 +8,7 @@
     <script src="cash.min.js"></script>
     <script src="support.js"></script>
     <script src="paintTools.js"></script>
-    <script src="bspaint.js"></script>
+    <link rel="stylesheet" href="/materialdesignicons.min.css">
 </head>
 <body>
   <div class="fillparent">
@@ -18,24 +18,48 @@
           Incoming Images
         </label>
         <select id="import_mode">
+          <option value="auto" selected>Automatic</option>
+          <option value="image" >Create new Image</option>
           <option value="replace_target">Replace Targeted Layer</option>
           <option value="layer">Add layer <small>(if size matches)</small></option>
-          <option value="image">Create new Image</option>
           <option value="ignore">Ignore</option>
         </select>
       </div>
-      <div id="pen" title="Brush 🇧" class="tool button"></div>
-      <div id="eraser" title="Eraser 🇪" class="tool button" style="background-image:url(images/eraser.png);"></div>
-      <div id="pixels" title="Pixels 🇿" class="tool button" style="background-image:url(images/pixels.png);"></div>
-      <div id="fine_eraser" title="Clear pixels" class="tool button" style="background-image:url(images/fine_eraser.png);"></div>
-      <div id="eyedropper" title="Sample color 🇵" class="tool button" ></div>
-      <div id="transform" title="Tansform Layer 🇹" class="tool button" ></div>
+      <div class="tools_panel">
+        <div id="pixels" title="Pen (P)" class="tool button"><span class="mdi mdi-pencil"></span></div>
+        <div id="pen" title="Brush (B)" class="tool button"><span class="mdi mdi-brush"></span></div>
+        <div id="fine_eraser" title="Hard Eraser (H)" class="tool button"><span class="mdi mdi-eraser-variant"></span></div>
+        <div id="eraser" title="Eraser (E)" class="tool button"><span class="mdi mdi-eraser"></span></div>
+        <div id="fill" title="Fill (F)" class="tool button"><span class="mdi mdi-format-color-fill"></span></div>
+        <div id="eyedropper" title="Sample color (I)" class="tool button"><span class="mdi mdi-eyedropper"></span></div>
+        <div id="transform" title="Tansform Layer (T)" class="tool button"><span class="mdi mdi-vector-square"></span></div>
+      </div>
+      <div id="radius_panel" class="slider_panel">
+        <div class="slider_label">
+          <div>Brush Radius</div>
+          <input id="radius_input" type="number" value="100" min="1" max="300" step="1">
+        </div>
+        <input id="radius_slider" type="range" min="1" max="100" value="100" step="1">
+      </div>
+      <div id="brush_hardness_panel" class="slider_panel">
+        <div class="slider_label">
+          <div>Brush Hardness</div>
+          <input id="brush_hardness_input" type="number" value="100" min="1" max="100" step="1">
+        </div>
+        <input id="brush_hardness_slider" type="range" min="1" max="100" value="100" step="1">
+      </div>
+      <div id="fill_thresh_panel" class="slider_panel">
+        <div class="slider_label">
+          <div>Fill Threshold</div>
+          <input id="fill_thresh_input" type="number" value="255" min="1" max="255" step="1">
+        </div>
+        <input id="fill_thresh_slider" type="range" min="1" max="255" value="255" step="1">
+      </div>
       <div class="subpanel actions">
-        <div id="clear" class="action button" ></div>
-        <div id="undo" class="action button" ></div>
-        <div id="redo" class="action button" ></div>
-        <button id="newImageBtn">New Image</button>
-
+        <div id="clear" class="action button" ><span class="mdi mdi-delete-forever"></span></div>
+        <div id="undo" class="action button" ><span class="mdi mdi-undo"></span></div>
+        <div id="redo" class="action button" ><span class="mdi mdi-redo"></span></div>
+        <div id="newImageBtn" class="action button" ><span class="mdi mdi-file-image-plus"></span></div>
       </div>
     </div>
     <div id="palette" class="noselect">
@@ -81,6 +105,7 @@
     </div>
   </div>
 
+  <script src="bspaint.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

@@ -51,6 +51,36 @@ function handleStatusUpdate(e) {
   }
 }
 
+function createMenuButton( className, text, tooltip, iconClass ) {
+
+    let menuRight = document.querySelector('.comfyui-menu-right').firstChild;
+
+    let buttonGroup = document.createElement('div');
+    buttonGroup.className = 'comfyui-button-group';
+    menuRight.appendChild(buttonGroup);
+
+    const button = document.createElement('button');
+    button.className = className;
+    button.setAttribute('aria-label', tooltip);
+    button.title = tooltip;
+
+    const iconContainer = document.createElement('span');
+    iconContainer.className = iconClass;
+    iconContainer.style.display = 'flex';
+    iconContainer.style.alignItems = 'center';
+    iconContainer.style.justifyContent = 'center';
+    iconContainer.style.width = '20px';
+    iconContainer.style.height = '16px';
+    button.appendChild(iconContainer);
+
+    const textNode = document.createTextNode(text);
+    button.appendChild(textNode);
+
+    buttonGroup.appendChild(button);
+
+    return button;
+}
+
 app.registerExtension({
 	  name: "canvas_tab",
   async init() {
@@ -61,12 +91,53 @@ app.registerExtension({
     blankImage.height=64;
     blankImage.toBlob(a=>dummyBlob=a)
 
-    addEventListener("message",handleWindowMessage)
-    api.addEventListener("status", handleStatusUpdate)
+    addEventListener("message",handleWindowMessage);
+    api.addEventListener("status", handleStatusUpdate);
+
+    let openButton = createMenuButton(
+        'comfyui-button comfyui-menu-mobile-collapse primary',
+        '',
+        'Open Canvas Editor',
+        'mdi mdi-brush'
+    );
+
+    openButton.onclick = ()=>{
+      focusEditor();
+    }
   },
 
   async beforeRegisterNodeDef(nodeType, nodeData, app) {
-  },
+		const getExtraMenuOptions = nodeType.prototype.getExtraMenuOptions;
+    nodeType.prototype.getExtraMenuOptions = function (_, options) {
+      const r = getExtraMenuOptions?.apply?.(this, arguments);
+      let img;
+      if (this.imageIndex != null) {
+        // An image is selected so select that
+        img = this.imgs[this.imageIndex];
+      } else if (this.overIndex != null) {
+        // No image is selected but one is hovered
+        img = this.imgs[this.overIndex];
+      }
+      if (img) {
+        let pos = options.findIndex((o) => o.content === "Save Image");
+        if (pos === -1) {
+          pos = 0;
+        } else {
+          pos++;
+        }
+        options.splice(pos, 0, {
+          content: "🖌️ Edit In Another Tab",
+          callback: async () => {
+            let src = img.src;
+            //focusEditor();
+            transmitImages([src]);
+          },
+        });
+      }
+
+      return r;
+    };
+	},
 
   async getCustomWidgets(app) {
     return {

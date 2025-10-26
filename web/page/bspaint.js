@@ -16,7 +16,9 @@ var tip = {
   x : 0.0,
   y : 0.0,
   color : "black",
-  size : 5,
+  size : 20,
+  hardness : 50,
+  threshold : 255,
   tool : feltTip,
 }
 
@@ -51,7 +53,9 @@ var initialPalette = [
   "#8080ff","#4060a0","#ff00ff", "#ffa0a0",];
 
 
-var brushSizeControl = brushDiameterControl("tip_diameter");
+var brushSizeControl = setupBrushDiameterControl("radius_slider", "radius_input");
+var brushHardnessControl = setupBrushHardnessControl("brush_hardness_slider", "brush_hardness_input");
+var fillthresholdControl = setupFillThresholdControl("fill_thresh_slider", "fill_thresh_input");
 
 var picStack = [];
 
@@ -222,7 +226,7 @@ class Layer {
 function updateMirrorGridButtonImage() {
   const columns = $(".grid_mirrors #repeat_x").val();
   const rows = $(".grid_mirrors #repeat_y").val();
-  const image=gridImage(rows,columns,48);
+  const image=gridImage(rows,columns,96);
   $("#mirror_grid").css('background-image',`url(${image.toDataURL()})`);
 }
 
@@ -280,8 +284,8 @@ function createDrawArea(canvas = blankCanvas(),initialTitle="Image") {
   const title = document.createElement("div");
   var updatingStroke=false;
   sidebar.className = "sidebutton";
-  closeButton.className = "closebutton";
-  renameButton.className = "renamebutton";
+  closeButton.className = "closebutton mdi mdi-close-thick";
+  renameButton.className = "renamebutton mdi mdi-form-textbox";
   titleBar.className = "titlebar";
   title.className = "title";
   title.textContent=initialTitle;
@@ -710,7 +714,7 @@ function initPaint(){
   $(".background")[0].addEventListener("wheel",handleMouseWheel);
 
   $(".paletteentry").on("mousedown", function(e) {
-    if (![feltTip,pixelTip].includes(tool)) {
+    if (![feltTip,pixelTip,floodFill].includes(tool)) {
       setTool(feltTip);
     }
     let eraser=false;
@@ -748,6 +752,7 @@ function initPaint(){
   $("#eraser")[0].tool=eraserTip;
   $("#fine_eraser")[0].tool=pixelClear;
   $("#eyedropper")[0].tool=eyeDropper;
+  $("#fill")[0].tool=floodFill;
   $("#transform")[0].tool=transformTool;
 
   $(".tool.button").on("click",function(e) {setTool(e.currentTarget.tool);});
@@ -756,18 +761,9 @@ function initPaint(){
   $("#undo").on("click",function(e) {activePic?.undo()});
   $("#redo").on("click",function(e) {activePic?.redo()});
 
-  brushSizeControl.addEventListener("changed", e=> {
-    tip.size=brushSizeControl.diameter;
-
-    for (let p of $(".pic")) {
-      updateBrushCursor(p);
-    }
-
-  });
-
   addEventListener("keydown", handleKeyDown);
 
-  $(".panel").append(brushSizeControl).append(`
+  $(".panel").append(`
   <div class="subpanel simple_mirrors">
     <div id="mirror_x" class="mirror button"></div>
     <div id="mirror_y" class="mirror button"></div>
@@ -837,7 +833,7 @@ function initPaint(){
 
   $("input.percentage").on("change",processPercentageInput);
   $("input.percentage~input").on("input",processPercentageRange);
-  window.test1=createDrawArea(undefined,"Image A");
+  /*window.test1=createDrawArea(undefined,"Image A");
   window.test2=createDrawArea(undefined,"Image B");
   test1.setPosition(30,60) ;
   test2.setPosition(640,60) ;
@@ -847,12 +843,12 @@ function initPaint(){
   //setActivePic(test1);
 
   $("#workspace").append(test1.element);
-  $("#workspace").append(test2.element);
+  $("#workspace").append(test2.element);*/
     
 
   brushSizeControl.diameter=tip.size;
 
-  setExportPic(test1);
+  //setExportPic(test1);
   setTool(feltTip)
 }
 
@@ -1087,6 +1083,11 @@ function setTool(newValue) {
   brushSizeControl.diameter=tip.size;
   uiCanvas.style.pointerEvents=tool?.eventHandlers?"":"none";
   
+
+
+  brushSizeControl.setVisible([feltTip,pixelTip,eraserTip,pixelClear].includes(tool));
+  brushHardnessControl.setVisible([feltTip,eraserTip].includes(tool));
+  fillthresholdControl.setVisible([floodFill].includes(tool));
 }
 
 
@@ -1096,85 +1097,131 @@ function stopDragging() {
   $(activePic.element).css("transition" , "");
 }
 
-function brushDiameterControl(id="diameter") {
-  const element = document.createElement("canvas");
-  element.className="diameter_control"
-  element.id=id;
-  const ctx = element.getContext("2d");
-  const max_diameter = 48;
-  element.width=192;
-  element.height=max_diameter;
-  //radius divider removes one radius for the half circle at the end of the control
-  const radiusDivider = (element.width/(max_diameter/2))-1; 
-  
-  let diameter = 15;
-  function redraw() {
-      let radius = diameter/2;
-      let max_radius = max_diameter/2;
-      ctx.clearRect(0,0,element.width,element.height);
-      ctx.beginPath();
-      ctx.arc(element.width-max_radius,max_radius,max_radius,-Math.PI/2,Math.PI/2);
-      ctx.lineTo(0,max_radius);
-      ctx.fillStyle="#8888";
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(radius*radiusDivider,max_radius,radius,0,Math.PI*2);
-      ctx.fillStyle="#000";
-      ctx.fill();    
-      ctx.fillText(diameter,8,10);
-  }
+function setupBrushDiameterControl(id="diameter", spinboxId="spinbox") {
+  const slider = document.getElementById(id);
+  const spinbox = document.getElementById(spinboxId);
 
-  Object.defineProperty(element, 'radius', {
-    get() { return this.diameter/2; },
-    set(value) {this.diameter=value*2}
+  Object.defineProperty(slider, 'radius', {
+    get() { return slider.value; },
+    set(value) {
+      slider.value=value;
+    }
   });
 
-  Object.defineProperty(element, 'diameter', {
-      get() { return diameter; },
-      set(value) {
-        value=Math.round(value);
-        if (value<1) value=1;
-          if (value>max_diameter) value=max_diameter;
-          if (value !== diameter) {
-              diameter=value;
-              element.dispatchEvent(new Event("changed"));
-          }
-          redraw();
-      }
-    });
+  Object.defineProperty(slider, 'diameter', {
+    get() { return this.radius*2; },
+    set(value) {
+      this.value = value;
+      this.radius = value/2;
+    }
+  });
 
-  let dragging = false;
-  function handleMouseDown(e) {
-      if (e.button !==0 ) return
-      let {x,y} = containerToCanvas(element,e.clientX,e.clientY)
-      e.stopPropagation();
-      element.radius=x/radiusDivider;
-      dragging=(y>0)  && (y<element.height);
+  function OnSliderChanged(size){
+    tip.size=size;
+    console.log(tip.size);
+
+    for (let p of $(".pic")) {
+      updateBrushCursor(p);
+    }
   }
-  function handleMouseMove(e) {
-      if (!dragging) return;
-      if (e.buttons === 0 )
-      {
-          dragging=false;
-          return
-      }    
-      
-      let {x,y} = containerToCanvas(element,e.clientX,e.clientY)
-      
-      element.radius=x/radiusDivider;
-      
+
+  slider.onchange = function() {
+    spinbox.value = slider.value;
+    OnSliderChanged(slider.diameter);
+  };
+
+  spinbox.onchange = function(){
+    slider.value = spinbox.value;
+    OnSliderChanged(slider.diameter);
   }
-  function handleMouseUp(e) {
-      if (e.button !==0 ) return
-      dragging=false;
+
+  slider.value = tip.size;
+  spinbox.value = slider.value;
+  
+  slider.setVisible = function(visible){
+    if(visible)
+      this.parentNode.classList.remove("hidden");
+    else
+      this.parentNode.classList.add("hidden")
   }
   
-  element.addEventListener("mousedown", handleMouseDown,{capture:true});
-  element.addEventListener("mousemove", handleMouseMove);
-  element.addEventListener("mouseup", handleMouseUp);
+  return slider;
+}
+
+function setupBrushHardnessControl(id="diameter", spinboxId="spinbox") {
+  const slider = document.getElementById(id);
+  const spinbox = document.getElementById(spinboxId);
+
+  Object.defineProperty(slider, 'hardness', {
+    get() { return slider.value; },
+    set(value) {
+      slider.value=value;
+    }
+  });
+
+  function OnSliderChanged(hardness){
+    tip.hardness=hardness;
+  }
+
+  slider.onchange = function() {
+    spinbox.value = slider.value;
+    OnSliderChanged(slider.value);
+  };
+
+  spinbox.onchange = function(){
+    slider.value = spinbox.value;
+    OnSliderChanged(slider.value);
+  }
+
+  slider.value = tip.hardness;
+  spinbox.value = slider.value;
+
+  slider.setVisible = function(visible){
+    if(visible)
+      this.parentNode.classList.remove("hidden");
+    else
+      this.parentNode.classList.add("hidden")
+  }
   
-  redraw();
-  return element
+  return slider;
+}
+
+function setupFillThresholdControl(id="diameter", spinboxId="spinbox") {
+  const slider = document.getElementById(id);
+  const spinbox = document.getElementById(spinboxId);
+
+  Object.defineProperty(slider, 'threshold', {
+    get() { return slider.value; },
+    set(value) {
+      slider.value=value;
+    }
+  });
+
+  function OnSliderChanged(threshold){
+    tip.threshold=threshold;
+  }
+
+  slider.onchange = function() {
+    spinbox.value = slider.value;
+    OnSliderChanged(slider.value);
+  };
+
+  spinbox.onchange = function(){
+    slider.value = spinbox.value;
+    OnSliderChanged(slider.value);
+  }
+
+  slider.value = tip.threshold;
+  spinbox.value = slider.value;
+
+  slider.setVisible = function(visible){
+    if(visible)
+      this.parentNode.classList.remove("hidden");
+    else
+      this.parentNode.classList.add("hidden")
+  }
+  
+  return slider;
 }
 
 
@@ -1184,7 +1231,7 @@ function poulateLayerControl() {
     <div class="layer-attributes">
       <div class="imageLayer">      
       <select name="composite-node" class="composite-mode">
-        <option value="source-over">Standard Color</option>
+        <option value="source-over">Normal</option>
         <option value="lighter">Lighter</option>
         <option value="multiply">Multiply</option>
         <option value="screen">Screen</option>
@@ -1215,9 +1262,9 @@ function poulateLayerControl() {
   
     </div> 
     <div class="layer_actions">
-    <div class="add_layer" title="New empty layer"></div>
-    <div class="duplicate_layer" title="duplicate current layer.  Ctrl duplicate target layer"></div>
-    <div class="remove_layer" title="delete selected layer"></div>
+    <div class="add_layer mdi mdi-plus" title="New empty layer"></div>
+    <div class="duplicate_layer mdi mdi-content-copy" title="duplicate current layer.  Ctrl duplicate target layer"></div>
+    <div class="remove_layer mdi mdi-delete-forever" title="delete selected layer"></div>
     </div>
   `)
 
@@ -1336,7 +1383,7 @@ function updateLayerList() {
   function makeLayerWidget(layer) {    
     const pic=activePic;
     const result = $(`<div class="layer_widget ${layer===pic.activeLayer?'active':''} ${targetLayer==layer?'target':''}" draggable="true">
-        <div class= "visibilitybox ${layer.visible?'showing':''}"> </div> 
+        <div class= "visibilitybox mdi ${layer.visible?'mdi-eye':'mdi-eye-closed'}"> </div> 
         <canvas class="thumbnail" width="32" height="32"> </canvas>
         <div class="layer_name"> ${layer.title} </div>
         ${layer.mask?`<div class="checkbox ${pic.mask===layer?'checked':''}"></div>`:''}
@@ -1550,10 +1597,11 @@ hotkeys["BACKSPACE"] = _=>{activePic?.clearLayer()}
 hotkeys["ALT_BACKSPACE"] = _=>{fillOrClear($("#foreground"))}
 hotkeys["CTRL_BACKSPACE"] = _=>{fillOrClear($("#background"))}
   
-hotkeys["P"] = _=>{setTool(eyeDropper);}
+hotkeys["I"] = _=>{setTool(eyeDropper);}
 hotkeys["B"] = _=>{setTool(feltTip);}
-hotkeys["Z"] = _=>{setTool(pixelTip);}
+hotkeys["P"] = _=>{setTool(pixelTip);}
 hotkeys["E"] = _=>{setTool(eraserTip);}
+hotkeys["F"] = _=>{setTool(floodFill);}
 hotkeys["T"] = _=>{setTool(transformTool);}
 
 hotkeys["]"] = _=>{brushSizeControl.diameter+=1}

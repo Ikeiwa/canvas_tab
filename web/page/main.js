@@ -54,12 +54,19 @@ function loadImagefromURL(url) {
   img.onload = function() {    
     console.log("import mode is",$("#import_mode").val())
     switch ($("#import_mode").val()) {
+        case "auto":
+            if(targetLayer !== null && targetLayer.canvas.width == img.width && targetLayer.canvas.height == img.height){
+                replaceLayerContent(targetLayer, img);
+                break;
+            }
+            setExportPic(addNewImage(img));
+            break;
         case "layer":
             addNewLayer(img)
-        break;
+            break;
         case "image":
-        setExportPic(addNewImage(img));    
-        break;
+            setExportPic(addNewImage(img));    
+            break;
         case "replace_target":
             if (targetLayer !== null) {
                 replaceLayerContent(targetLayer, img);
