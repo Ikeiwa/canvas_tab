@@ -8,7 +8,7 @@ if (location.pathname.includes("/page/")) {
   $(initPaint);
 }
 
-var tool=feltTip;
+var tool=pixelTip;
 
 var tip = {
   lastX : 0,
@@ -19,7 +19,7 @@ var tip = {
   size : 20,
   hardness : 50,
   threshold : 255,
-  tool : feltTip,
+  tool : pixelTip,
 }
 
 
@@ -715,7 +715,7 @@ function initPaint(){
 
   $(".paletteentry").on("mousedown", function(e) {
     if (![feltTip,pixelTip,floodFill].includes(tool)) {
-      setTool(feltTip);
+      setTool(pixelTip);
     }
     let eraser=false;
     let c= $(e.currentTarget).data("colour");
@@ -849,7 +849,7 @@ function initPaint(){
   brushSizeControl.diameter=tip.size;
 
   //setExportPic(test1);
-  setTool(feltTip)
+  setTool(pixelTip)
 }
 
 function addNewImage(image) {
@@ -1386,7 +1386,7 @@ function updateLayerList() {
         <div class= "visibilitybox mdi ${layer.visible?'mdi-eye':'mdi-eye-closed'}"> </div> 
         <canvas class="thumbnail" width="32" height="32"> </canvas>
         <div class="layer_name"> ${layer.title} </div>
-        ${layer.mask?`<div class="checkbox ${pic.mask===layer?'checked':''}"></div>`:''}
+        ${layer.mask?`<div class="checkbox ${pic.mask===layer?'checked':''}"><span class="mdi mdi-power"></span></div>`:''}
       </div>
     `)[0];
   

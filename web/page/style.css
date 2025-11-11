@@ -568,14 +568,14 @@ input[type="color"] {
 #layer_control .checkbox {
   width: 16px;
   height: 16px;
-  border: 1px solid var(--border-color);
+  color: var(--content-color);
+  opacity: 50%;
   display: inline-block;
   position: absolute;
-  top: 8px;
   right: 8px;
 }
 #layer_control .checkbox.checked {
-  background: radial-gradient(ellipse at center, #ffffff 0%,#e0e6f9 11%,#5b9aff 43%,#3d8cf4 70%,#007fef 100%); 
+  opacity: 100%;
 }
 
 #layer_control .layer_list.insert_top {
